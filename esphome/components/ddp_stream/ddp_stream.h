@@ -45,6 +45,13 @@ class DdpStream : public Component {
   void set_port(uint16_t p) { port_ = p; }
   uint16_t get_port() const { return port_; }
 
+  // Optional cadence control (global)
+  void set_present_on_timeout(bool v) { present_on_timeout_ = v; }
+  void set_timeout_coverage(double v) { timeout_coverage_ = v; }
+  void set_timeout_factor(double v)   { timeout_factor_   = v; }
+  void set_default_fps(double v)      { default_fps_      = v; }
+  void set_adapt_fps(bool v)          { adapt_fps_        = v; }
+
   void add_stream_binding(uint8_t id,
                           std::function<lv_obj_t*()> getter,
                           int w /* = -1 */, int h /* = -1 */);
@@ -66,7 +73,7 @@ class DdpStream : public Component {
 
     // Triple buffering
     std::vector<uint16_t> front_buf;     // currently displayed (RGB565)
-    std::vector<uint16_t> ready_buf;     // next to present (filled on PUSH)
+    std::vector<uint16_t> ready_buf;     // next to present (filled on PUSH/timeout)
     std::vector<uint16_t> accum_buf;     // RX writes current frame here
     std::atomic<bool> have_ready{false}; // a frame is queued for present
 
@@ -119,10 +126,15 @@ class DdpStream : public Component {
     double   qwait_ms_ewma{0.0};
     double   build_ms_ewma{0.0};
 
-    // NEW: max inter-packet gap within a frame (diagnostic)
+    // Diagnostic: largest intra-frame gap (ms)
     double   intra_ms_max{0.0};
     int64_t  last_pkt_us{0};
 #endif
+
+    // Soft-present state (always defined; used only if feature enabled)
+    double   target_fps{0.0};       // 0 => initialize from default_fps_
+    int64_t  frame_deadline_us{0};  // computed when first pkt of frame arrives
+    double   cov_this_frame{0.0};   // 0..1 coverage for the current frame
 
     bool bound{false};
   };
@@ -141,12 +153,22 @@ class DdpStream : public Component {
   Binding* find_binding_(uint8_t id);
   void handle_packet_(const uint8_t *buf, size_t len);
 
+  // Timeout-based promotion
+  void force_present_if_due_(Binding &b);
+
+  // Config
   uint16_t port_{4048};
   int sock_{-1};
   TaskHandle_t task_{nullptr};
-
   bool udp_opened_{false};
   std::map<uint8_t, Binding> bindings_;
+
+  // Global cadence options
+  bool   present_on_timeout_{false};
+  double timeout_coverage_{0.90}; // >=90% pixels -> present
+  double timeout_factor_{1.20};   // 1.2x frame period -> present
+  double default_fps_{25.0};      // boot cadence
+  bool   adapt_fps_{true};        // learn cadence from pushes
 };
 
 }  // namespace ddp_stream
