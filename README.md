@@ -77,6 +77,7 @@ ws://<server-ip>:8788/control?w=<W>&h=<H>&out=<ID>&src=<SRC>[&pace=30][&ema=0.2]
   - `loop` - `0|1` (repeat)
   - `ddp_port` - DDP UDP port (default `4048`)
   - `hw` - decoder preference: `auto|none|qsv|vaapi|videotoolbox|d3d11va|cuda`
+  - `format` - `rgb888` (default), `rgb565`
 
 Example defaults file (`ws_ddp_proxy.yaml`):
 ```yaml
@@ -143,19 +144,18 @@ ddp_stream:
 
 ```yaml
 ws_ddp_control:
-  - id: ws
-    ws_host: ${WS_HOST}
-    ws_port: ${WS_PORT}
-    width: ${WIDTH}
-    height: ${HEIGHT}
-    out: ${OUT_ID}
-    src: ${VIDEO_SRC}
-    pace: 30
-    ema: 0.2
-    expand: auto
-    loop: true
-    ddp_port: 4048
-    hw: auto
+  id: ws
+  ws_host: ${WS_HOST}
+  ws_port: ${WS_PORT}
+  outputs:
+    - id: 1
+      src: ${VIDEO_SRC}
+      pace: 30
+      ema: 0.2
+      expand: auto
+      loop: true
+      hw: auto
+      format: rgb888
 ```
 
 ---
