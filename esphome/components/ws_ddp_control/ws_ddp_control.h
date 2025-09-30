@@ -90,7 +90,7 @@ class WsDdpControl : public Component {
   // ESPHome
   void setup() override {}
   void dump_config() override;
-  void loop() override {}
+  float get_setup_priority() const override { return setup_priority::AFTER_CONNECTION; }
 
  protected:
   // ws event trampoline
